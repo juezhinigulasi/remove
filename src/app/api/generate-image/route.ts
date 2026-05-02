@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = await fetch('https://yunwuai/v1/images/generations', {
+    const response = await fetch('https://yunwu.ai/v1/images/generations', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

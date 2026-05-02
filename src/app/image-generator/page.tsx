@@ -12,7 +12,7 @@ export default function ImageGenerator() {
   });
   const [prompt, setPrompt] = useState("");
   const [ratio, setRatio] = useState("1:1");
-  const [model, setModel] = useState("gpt-image-2");
+  const [model, setModel] = useState("gpt-image-2-all");
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export default function ImageGenerator() {
 
   const ratios = ["1:1", "16:9", "3:2", "9:16", "2:3", "4:3"];
   const models = [
-    { id: "gpt-image-2", name: "gpt-image-2", tag: "特惠通道" },
+    { id: "gpt-image-2-all", name: "gpt-image-2-all", tag: "特惠通道" },
     { id: "gpt-image-2-1k", name: "gpt-image-2-1k", tag: "" },
     { id: "gpt-image-2-2k", name: "gpt-image-2-2k", tag: "" },
     { id: "gpt-image-2-1k", name: "gpt-image-2-1k", tag: "热门" },
