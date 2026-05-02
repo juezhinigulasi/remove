@@ -35,6 +35,7 @@ export default function ImageGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
 
   const saveHistory = (history: GenerationRecord[]) => {
     localStorage.setItem('yunwuai_generation_history', JSON.stringify(history));
@@ -197,6 +198,16 @@ export default function ImageGenerator() {
     }
   };
 
+  const handleDeleteRecord = (id: string) => {
+    if (confirm('确定要删除这张图片吗？')) {
+      setGenerationHistory(prev => {
+        const updated = prev.filter(r => r.id !== id);
+        saveHistory(updated);
+        return updated;
+      });
+    }
+  };
+
   const handleSaveApiKey = () => {
     localStorage.setItem('yunwuai_api_key', apiKey);
   };
@@ -315,15 +326,7 @@ export default function ImageGenerator() {
                     placeholder="根据主题描述生成内容，描述生成的场景，主题，一键成片"
                     className="w-full h-32 p-4 bg-gray-900/80 border border-gray-700 rounded-xl text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 resize-none transition-all text-sm"
                   />
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="flex gap-2">
-                      <button className="px-3 py-1 bg-gray-700/50 text-gray-300 rounded-lg text-xs">
-                        🔄 播放复制
-                      </button>
-                      <button className="px-3 py-1 bg-gray-700/50 text-gray-300 rounded-lg text-xs">
-                        AI 润色
-                      </button>
-                    </div>
+                  <div className="flex items-center justify-end mt-2">
                     <span className="text-xs text-gray-500">0/5000</span>
                   </div>
                 </div>
@@ -465,6 +468,19 @@ export default function ImageGenerator() {
                               <span className="text-gray-600 text-sm">暂无图片</span>
                             </div>
                           )}
+                          
+                          {/* 删除按钮 */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteRecord(record.id);
+                            }}
+                            className="absolute top-2 right-2 p-1.5 bg-red-500/80 hover:bg-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          >
+                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
 
                           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                             {record.status === 'success' && record.images.length > 0 && (
