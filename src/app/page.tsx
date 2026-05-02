@@ -30,7 +30,7 @@ export default function Home() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-6">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-cyan-400 bg-clip-text text-transparent mb-2" style={{textShadow: '0 0 30px rgba(34, 211, 238, 0.5)'}}>
-            ✨ 明亮排版工具 ✨
+            ✨ 明亮排版工具2.0 ✨
           </h1>
           <p className="text-gray-400 text-sm">微信联系：zhengnianxin123</p>
         </div>

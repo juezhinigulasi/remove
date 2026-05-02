@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "明亮排版工具",
+  title: "明亮排版工具2.0",
   description: "去除文案中的空格，保留标点符号",
 };
 
