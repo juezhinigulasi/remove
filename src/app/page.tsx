@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 export default function Home() {
   const [inputText, setInputText] = useState("");
@@ -28,7 +29,19 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-6">
+        <div className="flex flex-col items-center mb-6">
+          <div className="flex gap-4 mb-4">
+            <Link href="/">
+              <button className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl font-medium shadow-lg shadow-cyan-500/30 transition-all duration-200 flex items-center gap-2">
+                ✨ 明亮排版工具
+              </button>
+            </Link>
+            <Link href="/image-generator">
+              <button className="px-6 py-3 bg-gray-700/50 hover:bg-gray-700 text-gray-300 rounded-xl font-medium transition-all duration-200 border border-gray-600/50 flex items-center gap-2">
+                🎨 明亮生图工具
+              </button>
+            </Link>
+          </div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-cyan-400 bg-clip-text text-transparent mb-2" style={{textShadow: '0 0 30px rgba(34, 211, 238, 0.5)'}}>
             ✨ 明亮排版工具2.0 ✨
           </h1>
