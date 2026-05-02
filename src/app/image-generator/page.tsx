@@ -34,7 +34,6 @@ export default function ImageGenerator() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'generating' | 'success' | 'failed'>('all');
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
 
   const saveHistory = (history: GenerationRecord[]) => {
@@ -76,6 +75,24 @@ export default function ImageGenerator() {
       '4:3': '1024x768',
     };
     return sizeMap[ratio] || '1024x1024';
+  };
+
+  const handleDownload = async (imageUrl: string) => {
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `generated-image-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('下载失败:', error);
+      alert('下载失败，请稍后重试');
+    }
   };
 
   const handleGenerate = async () => {
@@ -178,12 +195,6 @@ export default function ImageGenerator() {
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  const handleCopyPrompt = (recordPrompt: string, index: number) => {
-    navigator.clipboard.writeText(recordPrompt);
-    setCopiedIndex(index);
-    setTimeout(() => setCopiedIndex(null), 2000);
   };
 
   const handleSaveApiKey = () => {
@@ -438,7 +449,7 @@ export default function ImageGenerator() {
                             <div className="w-full aspect-square bg-gray-800 flex items-center justify-center">
                               <div className="flex flex-col items-center gap-2">
                                 <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                                 <span className="text-gray-400 text-xs">生成失败</span>
                               </div>
@@ -463,21 +474,16 @@ export default function ImageGenerator() {
                                   className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
                                 >
                                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                   </svg>
                                 </button>
                                 <button
-                                  onClick={() => handleCopyPrompt(record.prompt, recordIndex)}
+                                  onClick={() => handleDownload(record.images[0])}
                                   className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
                                 >
                                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                  </svg>
-                                </button>
-                                <button className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors">
-                                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                   </svg>
                                 </button>
                               </>
@@ -498,14 +504,6 @@ export default function ImageGenerator() {
                               <span className="text-cyan-400 text-xs">{record.ratio}</span>
                             </div>
                             <p className="text-white text-xs truncate">{record.prompt.substring(0, 30)}...</p>
-                            <div className="flex items-center justify-end mt-2">
-                              <button
-                                onClick={() => handleCopyPrompt(record.prompt, recordIndex)}
-                                className="text-gray-400 hover:text-white text-xs"
-                              >
-                                {copiedIndex === recordIndex ? "✓ 已复制" : "📋"}
-                              </button>
-                            </div>
                           </div>
                         </div>
                       ))}
