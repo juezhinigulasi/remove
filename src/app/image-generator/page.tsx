@@ -10,6 +10,7 @@ export default function ImageGenerator() {
     }
     return '';
   });
+  const [mode, setMode] = useState<'text' | 'image'>('text');
   const [prompt, setPrompt] = useState("");
   const [ratio, setRatio] = useState("1:1");
   const [model, setModel] = useState("gpt-image-2-all");
@@ -17,15 +18,50 @@ export default function ImageGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
 
   const ratios = ["1:1", "16:9", "3:2", "9:16", "2:3", "4:3"];
   const models = [
     { id: "gpt-image-2-all", name: "gpt-image-2-all", tag: "特惠通道" },
-    { id: "gpt-image-2-1k", name: "gpt-image-2-1k", tag: "" },
-    { id: "gpt-image-2-2k", name: "gpt-image-2-2k", tag: "" },
     { id: "gpt-image-2-1k", name: "gpt-image-2-1k", tag: "热门" },
+    { id: "gpt-image-2-2k", name: "gpt-image-2-2k", tag: "" },
     { id: "gpt-image-2-4k", name: "gpt-image-2-4k", tag: "" },
   ];
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const newImages: string[] = [];
+      Array.from(files).forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            newImages.push(event.target.result as string);
+            if (newImages.length === files.length) {
+              setUploadedImages(newImages);
+            }
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const removeUploadedImage = (index: number) => {
+    setUploadedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const getSizeFromRatio = (ratio: string): string => {
+    const sizeMap: Record<string, string> = {
+      '1:1': '1024x1024',
+      '16:9': '1536x1024',
+      '3:2': '1024x768',
+      '9:16': '1024x1536',
+      '2:3': '768x1024',
+      '4:3': '1024x768',
+    };
+    return sizeMap[ratio] || '1024x1024';
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -34,25 +70,36 @@ export default function ImageGenerator() {
       return;
     }
     
+    if (mode === 'image' && uploadedImages.length === 0) {
+      alert('请先上传图片');
+      return;
+    }
+    
     setIsGenerating(true);
     
     try {
+      const bodyData: Record<string, any> = {
+        apiKey,
+        prompt,
+        model,
+        size: getSizeFromRatio(ratio),
+        n: 1,
+      };
+
+      if (mode === 'image' && uploadedImages.length > 0) {
+        bodyData.image = uploadedImages;
+      }
+
       const response = await fetch('/api/generate-image', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          apiKey,
-          prompt,
-          model,
-          size: ratio === '1:1' ? '1024x1024' : ratio === '16:9' ? '1536x1024' : ratio === '3:2' ? '1024x768' : ratio === '9:16' ? '1024x1536' : '1024x1024',
-          n: 1,
-        }),
+        body: JSON.stringify(bodyData),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'API request failed');
       }
 
@@ -111,10 +158,24 @@ export default function ImageGenerator() {
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl p-6 border border-gray-700/50">
               <div className="flex gap-2 mb-4">
-                <button className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg text-sm font-medium">
+                <button
+                  onClick={() => setMode('text')}
+                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    mode === 'text'
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                      : 'bg-gray-700/50 text-gray-300 border border-gray-600/50 hover:bg-gray-700'
+                  }`}
+                >
                   文生图
                 </button>
-                <button className="flex-1 px-4 py-2 bg-gray-700/50 text-gray-300 rounded-lg text-sm font-medium border border-gray-600/50">
+                <button
+                  onClick={() => setMode('image')}
+                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    mode === 'image'
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                      : 'bg-gray-700/50 text-gray-300 border border-gray-600/50 hover:bg-gray-700'
+                  }`}
+                >
                   图生图
                 </button>
               </div>
@@ -137,6 +198,38 @@ export default function ImageGenerator() {
                     API Key 会保存在本地浏览器中
                   </p>
                 </div>
+
+                {mode === 'image' && (
+                  <div>
+                    <label className="flex items-center gap-2 text-cyan-400 text-sm font-medium mb-2">
+                      <span className="w-2 h-2 bg-cyan-400 rounded-full"></span>
+                      上传图片
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageUpload}
+                      className="w-full p-4 bg-gray-900/80 border border-gray-700 rounded-xl text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all text-sm cursor-pointer"
+                    />
+                    {uploadedImages.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {uploadedImages.map((img, index) => (
+                          <div key={index} className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-600">
+                            <img src={img} alt={`上传 ${index + 1}`} className="w-full h-full object-cover" />
+                            <button
+                              onClick={() => removeUploadedImage(index)}
+                              className="absolute top-0 right-0 w-5 h-5 bg-red-500/80 flex items-center justify-center text-white text-xs hover:bg-red-500"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div>
                   <label className="flex items-center gap-2 text-cyan-400 text-sm font-medium mb-2">
                     <span className="w-2 h-2 bg-cyan-400 rounded-full"></span>
@@ -226,7 +319,6 @@ export default function ImageGenerator() {
                   ) : (
                     <>
                       🎨 生成生图
-                      <span className="text-xs opacity-70">消耗 13 积分</span>
                     </>
                   )}
                 </button>
