@@ -2,14 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, model, size, n = 1 } = await request.json();
-    
-    const apiKey = process.env.YUNWUAI_API_KEY;
+    const { apiKey, prompt, model, size, n = 1 } = await request.json();
     
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'API key not configured' },
-        { status: 500 }
+        { error: 'API key is required' },
+        { status: 400 }
       );
     }
 

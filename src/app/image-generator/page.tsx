@@ -4,6 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 
 export default function ImageGenerator() {
+  const [apiKey, setApiKey] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('yunwuai_api_key') || '';
+    }
+    return '';
+  });
   const [prompt, setPrompt] = useState("");
   const [ratio, setRatio] = useState("1:1");
   const [model, setModel] = useState("gpt-image-2");
@@ -23,6 +29,10 @@ export default function ImageGenerator() {
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
+    if (!apiKey.trim()) {
+      alert('请先输入 API Key');
+      return;
+    }
     
     setIsGenerating(true);
     
@@ -33,6 +43,7 @@ export default function ImageGenerator() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          apiKey,
           prompt,
           model,
           size: ratio === '1:1' ? '1024x1024' : ratio === '16:9' ? '1536x1024' : ratio === '3:2' ? '1024x768' : ratio === '9:16' ? '1024x1536' : '1024x1024',
@@ -41,7 +52,8 @@ export default function ImageGenerator() {
       });
 
       if (!response.ok) {
-        throw new Error('API request failed');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'API request failed');
       }
 
       const data = await response.json();
@@ -52,10 +64,14 @@ export default function ImageGenerator() {
       }
     } catch (error) {
       console.error('Error generating image:', error);
-      alert('生成图片失败，请稍后重试');
+      alert(error instanceof Error ? error.message : '生成图片失败，请稍后重试');
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleSaveApiKey = () => {
+    localStorage.setItem('yunwuai_api_key', apiKey);
   };
 
   const handleCopyPrompt = (index: number) => {
@@ -104,6 +120,23 @@ export default function ImageGenerator() {
               </div>
 
               <div className="space-y-4">
+                <div>
+                  <label className="flex items-center gap-2 text-cyan-400 text-sm font-medium mb-2">
+                    <span className="w-2 h-2 bg-cyan-400 rounded-full"></span>
+                    API Key
+                  </label>
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    onBlur={handleSaveApiKey}
+                    placeholder="请输入你的云雾 AI API Key"
+                    className="w-full p-4 bg-gray-900/80 border border-gray-700 rounded-xl text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all text-sm"
+                  />
+                  <p className="text-gray-500 text-xs mt-2">
+                    API Key 会保存在本地浏览器中
+                  </p>
+                </div>
                 <div>
                   <label className="flex items-center gap-2 text-cyan-400 text-sm font-medium mb-2">
                     <span className="w-2 h-2 bg-cyan-400 rounded-full"></span>
