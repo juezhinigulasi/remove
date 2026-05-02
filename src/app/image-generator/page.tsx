@@ -23,7 +23,7 @@ export default function ImageGenerator() {
   });
   const [mode, setMode] = useState<'text' | 'image'>('text');
   const [prompt, setPrompt] = useState("");
-  const [ratio, setRatio] = useState("1:1");
+  const [ratio, setRatio] = useState("9:16");
   const [generationHistory, setGenerationHistory] = useState<GenerationRecord[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('yunwuai_generation_history');
@@ -41,7 +41,7 @@ export default function ImageGenerator() {
     localStorage.setItem('yunwuai_generation_history', JSON.stringify(history));
   };
 
-  const ratios = ["1:1", "16:9", "3:2", "9:16", "2:3", "4:3"];
+  const ratios = ["9:16", "16:9", "1:1", "3:2", "2:3", "4:3"];
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -68,10 +68,10 @@ export default function ImageGenerator() {
 
   const getSizeFromRatio = (ratio: string): string => {
     const sizeMap: Record<string, string> = {
-      '1:1': '1024x1024',
-      '16:9': '1536x1024',
-      '3:2': '1024x768',
       '9:16': '1024x1536',
+      '16:9': '1536x1024',
+      '1:1': '1024x1024',
+      '3:2': '1024x768',
       '2:3': '768x1024',
       '4:3': '1024x768',
     };
