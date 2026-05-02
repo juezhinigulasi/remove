@@ -122,6 +122,10 @@ export default function ImageGenerator() {
         bodyData.image = uploadedImages;
       }
 
+      console.log('Sending request to /api/generate-image:', {
+        bodyData: { ...bodyData, apiKey: '***' },
+      });
+
       const response = await fetch('/api/generate-image', {
         method: 'POST',
         headers: {
@@ -130,15 +134,20 @@ export default function ImageGenerator() {
         body: JSON.stringify(bodyData),
       });
 
+      console.log('Response status:', response.status, response.statusText);
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'API request failed');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('API error:', errorData);
+        throw new Error(errorData.error || `请求失败: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('Received response:', data);
       
       if (data.data && data.data.length > 0) {
         const images = data.data.map((item: any) => item.url || item.b64_json);
+        console.log('Generated images:', images);
         setGenerationHistory(prev => {
           const updated = prev.map(r => 
             r.id === recordId 
@@ -148,6 +157,9 @@ export default function ImageGenerator() {
           saveHistory(updated);
           return updated;
         });
+      } else {
+        console.warn('No images returned in response');
+        throw new Error('API 返回的数据格式不正确');
       }
     } catch (error) {
       console.error('Error generating image:', error);

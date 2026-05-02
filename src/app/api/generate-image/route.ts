@@ -1,20 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  
   try {
     const { apiKey, prompt, model, size, n = 1, image } = await request.json();
     
-    console.log('Received request:', {
+    console.log('========== Image Generation Request Started ==========');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Request body:', {
       hasApiKey: !!apiKey,
+      apiKeyLength: apiKey?.length || 0,
       hasPrompt: !!prompt,
+      promptLength: prompt?.length || 0,
       model,
       size,
       n,
       hasImage: !!image,
+      imageCount: image?.length || 0,
     });
     
     if (!apiKey) {
-      console.error('API key is required');
+      console.error('ERROR: API key is required');
       return NextResponse.json(
         { error: 'API key is required' },
         { status: 400 }
@@ -22,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!prompt) {
-      console.error('Prompt is required');
+      console.error('ERROR: Prompt is required');
       return NextResponse.json(
         { error: 'Prompt is required' },
         { status: 400 }
@@ -34,47 +41,79 @@ export async function POST(request: NextRequest) {
       prompt,
       size: size || '1024x1024',
       n,
-      format: 'jpeg',
-      quality: 'high',
     };
 
     if (image && Array.isArray(image) && image.length > 0) {
       requestBody.image = image;
     }
 
-    console.log('Sending request to API:', {
-      url: 'https://yunwu.ai/v1/images/generations',
-      model: requestBody.model,
-      size: requestBody.size,
-      hasImage: !!requestBody.image,
-    });
+    const apiUrl = 'https://yunwu.ai/v1/images/generations';
+    console.log('Sending request to:', apiUrl);
+    console.log('Request body:', JSON.stringify(requestBody).substring(0, 500) + '...');
 
-    const response = await fetch('https://yunwu.ai/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(requestBody),
-    });
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
 
-    console.log('API response status:', response.status);
+    if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+      console.log('Authorization header added');
+    }
+
+    let response;
+    try {
+      response = await fetch(apiUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+        timeout: 120000,
+      });
+    } catch (fetchError) {
+      console.error('FETCH ERROR:', fetchError);
+      return NextResponse.json(
+        { error: `Network error: ${fetchError instanceof Error ? fetchError.message : 'Unknown'}` },
+        { status: 503 }
+      );
+    }
+
+    const duration = Date.now() - startTime;
+    console.log('API response received in:', duration, 'ms');
+    console.log('Response status:', response.status, response.statusText);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-      console.error('API error:', response.status, errorData);
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { message: await response.text().catch(() => 'Unknown error') };
+      }
+      console.error('API Error Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorData,
+      });
       return NextResponse.json(
-        { error: errorData.message || `API request failed with status ${response.status}` },
+        { error: errorData.message || errorData.error || `API request failed: ${response.status} ${response.statusText}` },
         { status: response.status }
       );
     }
 
     const data = await response.json();
-    console.log('API response received:', { hasData: !!data, dataLength: data?.data?.length });
+    console.log('Success! Response data:', {
+      hasData: !!data,
+      dataLength: data?.data?.length || 0,
+    });
+    console.log('========== Image Generation Request Completed ==========');
+    
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Image generation error:', error);
+    const duration = Date.now() - startTime;
+    console.error('========== Image Generation Request Failed ==========');
+    console.error('Duration:', duration, 'ms');
+    console.error('Error:', error);
+    console.error('========== End Error ==========');
+    
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to generate image' },
       { status: 500 }
