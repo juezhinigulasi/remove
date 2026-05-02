@@ -25,16 +25,37 @@ export default function ImageGenerator() {
     if (!prompt.trim()) return;
     
     setIsGenerating(true);
-    await new Promise(resolve => setTimeout(resolve, 2000));
     
-    const mockImages = [
-      "https://neeko-copilot.bytedance.net/api/text_to_image?prompt=cute%20golden%20retriever%20puppy%20sitting%20in%20cozy%20room%20warm%20lighting%20cartoon%20style&image_size=square",
-      "https://neeko-copilot.bytedance.net/api/text_to_image?prompt=beautiful%20golden%20retriever%20dog%20playing%20in%20park%20sunny%20day%20anime%20style&image_size=square",
-      "https://neeko-copilot.bytedance.net/api/text_to_image?prompt=adorable%20golden%20retriever%20puppy%20with%20flowers%20spring%20season%20watercolor%20art&image_size=square",
-    ];
-    
-    setGeneratedImages(mockImages);
-    setIsGenerating(false);
+    try {
+      const response = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt,
+          model,
+          size: ratio === '1:1' ? '1024x1024' : ratio === '16:9' ? '1536x1024' : ratio === '3:2' ? '1024x768' : ratio === '9:16' ? '1024x1536' : '1024x1024',
+          n: 1,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('API request failed');
+      }
+
+      const data = await response.json();
+      
+      if (data.data && data.data.length > 0) {
+        const images = data.data.map((item: any) => item.url || item.b64_json);
+        setGeneratedImages(images);
+      }
+    } catch (error) {
+      console.error('Error generating image:', error);
+      alert('生成图片失败，请稍后重试');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleCopyPrompt = (index: number) => {
