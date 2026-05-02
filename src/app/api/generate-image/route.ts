@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
-  
+
   try {
     const { apiKey, prompt, model, size, n = 1, image } = await request.json();
-    
+
     console.log('========== Image Generation Request Started ==========');
     console.log('Timestamp:', new Date().toISOString());
     console.log('Request body:', {
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       hasImage: !!image,
       imageCount: image?.length || 0,
     });
-    
+
     if (!apiKey) {
       console.error('ERROR: API key is required');
       return NextResponse.json(
@@ -63,14 +63,25 @@ export async function POST(request: NextRequest) {
 
     let response;
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
+
       response = await fetch(apiUrl, {
         method: 'POST',
         headers,
         body: JSON.stringify(requestBody),
-        timeout: 120000,
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
     } catch (fetchError) {
       console.error('FETCH ERROR:', fetchError);
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        return NextResponse.json(
+          { error: '请求超时，请稍后重试' },
+          { status: 504 }
+        );
+      }
       return NextResponse.json(
         { error: `Network error: ${fetchError instanceof Error ? fetchError.message : 'Unknown'}` },
         { status: 503 }
@@ -105,7 +116,7 @@ export async function POST(request: NextRequest) {
       dataLength: data?.data?.length || 0,
     });
     console.log('========== Image Generation Request Completed ==========');
-    
+
     return NextResponse.json(data);
   } catch (error) {
     const duration = Date.now() - startTime;
@@ -113,7 +124,7 @@ export async function POST(request: NextRequest) {
     console.error('Duration:', duration, 'ms');
     console.error('Error:', error);
     console.error('========== End Error ==========');
-    
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to generate image' },
       { status: 500 }
