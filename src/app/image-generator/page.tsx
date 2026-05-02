@@ -24,7 +24,6 @@ export default function ImageGenerator() {
   const [mode, setMode] = useState<'text' | 'image'>('text');
   const [prompt, setPrompt] = useState("");
   const [ratio, setRatio] = useState("1:1");
-  const [model, setModel] = useState("gpt-image-2-all");
   const [generationHistory, setGenerationHistory] = useState<GenerationRecord[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('yunwuai_generation_history');
@@ -43,12 +42,6 @@ export default function ImageGenerator() {
   };
 
   const ratios = ["1:1", "16:9", "3:2", "9:16", "2:3", "4:3"];
-  const models = [
-    { id: "gpt-image-2-all", name: "gpt-image-2-all", tag: "特惠通道" },
-    { id: "gpt-image-2-1k", name: "gpt-image-2-1k", tag: "热门" },
-    { id: "gpt-image-2-2k", name: "gpt-image-2-2k", tag: "" },
-    { id: "gpt-image-2-4k", name: "gpt-image-2-4k", tag: "" },
-  ];
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -103,7 +96,7 @@ export default function ImageGenerator() {
     const newRecord: GenerationRecord = {
       id: recordId,
       prompt,
-      model,
+      model: 'gpt-image-2-all',
       ratio,
       images: [],
       status: 'generating',
@@ -120,7 +113,7 @@ export default function ImageGenerator() {
       const bodyData: Record<string, any> = {
         apiKey,
         prompt,
-        model,
+        model: 'gpt-image-2-all',
         size: getSizeFromRatio(ratio),
         n: 1,
       };
@@ -315,33 +308,6 @@ export default function ImageGenerator() {
                 <div>
                   <label className="flex items-center gap-2 text-cyan-400 text-sm font-medium mb-2">
                     <span className="w-2 h-2 bg-cyan-400 rounded-full"></span>
-                    模型选择
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {models.map((m) => (
-                      <button
-                        key={m.id}
-                        onClick={() => setModel(m.id)}
-                        className={`relative px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                          model === m.id
-                            ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/30"
-                            : "bg-gray-700/50 text-gray-300 border border-gray-600/50 hover:bg-gray-700"
-                        }`}
-                      >
-                        {m.name}
-                        {m.tag && (
-                          <span className="absolute -top-1 -right-1 px-2 py-0.5 bg-purple-500 text-white text-xs rounded-full">
-                            {m.tag}
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-2 text-cyan-400 text-sm font-medium mb-2">
-                    <span className="w-2 h-2 bg-cyan-400 rounded-full"></span>
                     生图比例
                   </label>
                   <div className="grid grid-cols-3 gap-2">
@@ -520,8 +486,7 @@ export default function ImageGenerator() {
                               <span className="text-cyan-400 text-xs">{record.ratio}</span>
                             </div>
                             <p className="text-white text-xs truncate">{record.prompt.substring(0, 30)}...</p>
-                            <div className="flex items-center justify-between mt-2">
-                              <span className="text-gray-500 text-xs">{record.model}</span>
+                            <div className="flex items-center justify-end mt-2">
                               <button
                                 onClick={() => handleCopyPrompt(record.prompt, recordIndex)}
                                 className="text-gray-400 hover:text-white text-xs"
