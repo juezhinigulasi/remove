@@ -3,6 +3,17 @@
 import { useState } from "react";
 import Link from "next/link";
 
+interface GenerationRecord {
+  id: string;
+  prompt: string;
+  model: string;
+  ratio: string;
+  images: string[];
+  status: 'generating' | 'success' | 'failed';
+  createdAt: number;
+  error?: string;
+}
+
 export default function ImageGenerator() {
   const [apiKey, setApiKey] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -14,11 +25,22 @@ export default function ImageGenerator() {
   const [prompt, setPrompt] = useState("");
   const [ratio, setRatio] = useState("1:1");
   const [model, setModel] = useState("gpt-image-2-all");
-  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const [generationHistory, setGenerationHistory] = useState<GenerationRecord[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('yunwuai_generation_history');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+  const [filterStatus, setFilterStatus] = useState<'all' | 'generating' | 'success' | 'failed'>('all');
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+
+  const saveHistory = (history: GenerationRecord[]) => {
+    localStorage.setItem('yunwuai_generation_history', JSON.stringify(history));
+  };
 
   const ratios = ["1:1", "16:9", "3:2", "9:16", "2:3", "4:3"];
   const models = [
@@ -77,6 +99,23 @@ export default function ImageGenerator() {
     
     setIsGenerating(true);
     
+    const recordId = Date.now().toString();
+    const newRecord: GenerationRecord = {
+      id: recordId,
+      prompt,
+      model,
+      ratio,
+      images: [],
+      status: 'generating',
+      createdAt: Date.now(),
+    };
+    
+    setGenerationHistory(prev => {
+      const updated = [newRecord, ...prev];
+      saveHistory(updated);
+      return updated;
+    });
+    
     try {
       const bodyData: Record<string, any> = {
         apiKey,
@@ -107,14 +146,39 @@ export default function ImageGenerator() {
       
       if (data.data && data.data.length > 0) {
         const images = data.data.map((item: any) => item.url || item.b64_json);
-        setGeneratedImages(images);
+        setGenerationHistory(prev => {
+          const updated = prev.map(r => 
+            r.id === recordId 
+              ? { ...r, images, status: 'success' as const }
+              : r
+          );
+          saveHistory(updated);
+          return updated;
+        });
       }
     } catch (error) {
       console.error('Error generating image:', error);
-      alert(error instanceof Error ? error.message : '生成图片失败，请稍后重试');
+      const errorMessage = error instanceof Error ? error.message : '生成图片失败，请稍后重试';
+      alert(errorMessage);
+      
+      setGenerationHistory(prev => {
+        const updated = prev.map(r => 
+          r.id === recordId 
+            ? { ...r, status: 'failed' as const, error: errorMessage }
+            : r
+        );
+        saveHistory(updated);
+        return updated;
+      });
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleCopyPrompt = (recordPrompt: string, index: number) => {
+    navigator.clipboard.writeText(recordPrompt);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex(null), 2000);
   };
 
   const handleSaveApiKey = () => {
@@ -330,69 +394,164 @@ export default function ImageGenerator() {
             <div className="bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl p-6 border border-gray-700/50">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-gray-300 font-medium">生成记录</h3>
-                <span className="text-gray-500 text-sm">共 {generatedImages.length || 17} 条</span>
+                <span className="text-gray-500 text-sm">共 {generationHistory.length} 条</span>
                 <div className="flex gap-2">
-                  <button className="px-3 py-1 text-gray-300 text-xs rounded-lg bg-gray-700/50">全部</button>
-                  <button className="px-3 py-1 text-gray-500 text-xs rounded-lg">生成中</button>
-                  <button className="px-3 py-1 text-gray-500 text-xs rounded-lg">成功</button>
-                  <button className="px-3 py-1 text-gray-500 text-xs rounded-lg">失败</button>
+                  <button
+                    onClick={() => setFilterStatus('all')}
+                    className={`px-3 py-1 text-xs rounded-lg transition-all ${
+                      filterStatus === 'all'
+                        ? 'bg-gray-700/50 text-gray-300'
+                        : 'text-gray-500 hover:text-gray-300'
+                    }`}
+                  >
+                    全部
+                  </button>
+                  <button
+                    onClick={() => setFilterStatus('generating')}
+                    className={`px-3 py-1 text-xs rounded-lg transition-all ${
+                      filterStatus === 'generating'
+                        ? 'bg-yellow-500/20 text-yellow-400'
+                        : 'text-gray-500 hover:text-gray-300'
+                    }`}
+                  >
+                    生成中
+                  </button>
+                  <button
+                    onClick={() => setFilterStatus('success')}
+                    className={`px-3 py-1 text-xs rounded-lg transition-all ${
+                      filterStatus === 'success'
+                        ? 'bg-green-500/20 text-green-400'
+                        : 'text-gray-500 hover:text-gray-300'
+                    }`}
+                  >
+                    成功
+                  </button>
+                  <button
+                    onClick={() => setFilterStatus('failed')}
+                    className={`px-3 py-1 text-xs rounded-lg transition-all ${
+                      filterStatus === 'failed'
+                        ? 'bg-red-500/20 text-red-400'
+                        : 'text-gray-500 hover:text-gray-300'
+                    }`}
+                  >
+                    失败
+                  </button>
                 </div>
               </div>
 
-              {generatedImages.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {generatedImages.map((img, index) => (
-                    <div
-                      key={index}
-                      className="relative group bg-gray-900/80 rounded-xl overflow-hidden border border-gray-700/50"
-                    >
-                      <img
-                        src={img}
-                        alt={`生成图片 ${index + 1}`}
-                        className="w-full aspect-square object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <button className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors">
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                          </svg>
-                        </button>
-                        <button className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors">
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                        </button>
-                        <button className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors">
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                        </button>
-                      </div>
-                      <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
-                        <p className="text-white text-xs truncate">{prompt.substring(0, 30)}...</p>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-cyan-400 text-xs">吉卜力2D卡通动画风格...</span>
-                          <button
-                            onClick={() => handleCopyPrompt(index)}
-                            className="text-gray-400 hover:text-white text-xs"
-                          >
-                            {copiedIndex === index ? "✓ 已复制" : "📋"}
-                          </button>
+              {(() => {
+                const filteredHistory = filterStatus === 'all'
+                  ? generationHistory
+                  : generationHistory.filter(record => record.status === filterStatus);
+
+                if (filteredHistory.length > 0) {
+                  return (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {filteredHistory.map((record, recordIndex) => (
+                        <div
+                          key={record.id}
+                          className="relative group bg-gray-900/80 rounded-xl overflow-hidden border border-gray-700/50"
+                        >
+                          {record.status === 'generating' ? (
+                            <div className="w-full aspect-square bg-gray-800 flex items-center justify-center">
+                              <div className="flex flex-col items-center gap-2">
+                                <svg className="w-8 h-8 animate-spin text-cyan-400" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                                <span className="text-gray-400 text-xs">生成中...</span>
+                              </div>
+                            </div>
+                          ) : record.status === 'failed' ? (
+                            <div className="w-full aspect-square bg-gray-800 flex items-center justify-center">
+                              <div className="flex flex-col items-center gap-2">
+                                <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span className="text-gray-400 text-xs">生成失败</span>
+                              </div>
+                            </div>
+                          ) : record.images.length > 0 ? (
+                            <img
+                              src={record.images[0]}
+                              alt={`生成图片 ${recordIndex + 1}`}
+                              className="w-full aspect-square object-cover"
+                            />
+                          ) : (
+                            <div className="w-full aspect-square bg-gray-800 flex items-center justify-center">
+                              <span className="text-gray-600 text-sm">暂无图片</span>
+                            </div>
+                          )}
+
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            {record.status === 'success' && record.images.length > 0 && (
+                              <>
+                                <button
+                                  onClick={() => setSelectedImage(record.images[0])}
+                                  className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+                                >
+                                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={() => handleCopyPrompt(record.prompt, recordIndex)}
+                                  className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+                                >
+                                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                  </svg>
+                                </button>
+                                <button className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors">
+                                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                </button>
+                              </>
+                            )}
+                          </div>
+
+                          <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
+                            <div className="flex items-center gap-2 mb-1">
+                              {record.status === 'generating' && (
+                                <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded">生成中</span>
+                              )}
+                              {record.status === 'success' && (
+                                <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded">成功</span>
+                              )}
+                              {record.status === 'failed' && (
+                                <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded">失败</span>
+                              )}
+                              <span className="text-cyan-400 text-xs">{record.ratio}</span>
+                            </div>
+                            <p className="text-white text-xs truncate">{record.prompt.substring(0, 30)}...</p>
+                            <div className="flex items-center justify-between mt-2">
+                              <span className="text-gray-500 text-xs">{record.model}</span>
+                              <button
+                                onClick={() => handleCopyPrompt(record.prompt, recordIndex)}
+                                className="text-gray-400 hover:text-white text-xs"
+                              >
+                                {copiedIndex === recordIndex ? "✓ 已复制" : "📋"}
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div key={i} className="bg-gray-900/80 rounded-xl border border-gray-700/50 aspect-square flex items-center justify-center">
-                      <span className="text-gray-600 text-sm">点击生成图片</span>
+                  );
+                } else {
+                  return (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="bg-gray-900/80 rounded-xl border border-gray-700/50 aspect-square flex items-center justify-center">
+                          <span className="text-gray-600 text-sm">点击生成图片</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
+                  );
+                }
+              })()}
             </div>
           </div>
         </div>
