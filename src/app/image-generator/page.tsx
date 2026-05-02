@@ -185,12 +185,6 @@ export default function ImageGenerator() {
     localStorage.setItem('yunwuai_api_key', apiKey);
   };
 
-  const handleCopyPrompt = (index: number) => {
-    navigator.clipboard.writeText(prompt);
-    setCopiedIndex(index);
-    setTimeout(() => setCopiedIndex(null), 2000);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-8 px-4">
       <div className="max-w-7xl mx-auto">
