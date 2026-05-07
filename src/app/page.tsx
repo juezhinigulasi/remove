@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 
 export default function Home() {
-  const [inputText, setInputText] = useState("");
-  const [outputText, setOutputText] = useState("");
+  const [inputText, setInputText] = useState<string>("");
+  const [outputText, setOutputText] = useState<string>("");
   const [copied, setCopied] = useState(false);
 
   const handleFormat = () => {
@@ -30,7 +29,6 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="flex flex-col items-center mb-6">
-
           <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-cyan-400 bg-clip-text text-transparent mb-2" style={{textShadow: '0 0 30px rgba(34, 211, 238, 0.5)'}}>
             ✨ 明亮排版工具2.0 ✨
           </h1>
@@ -51,7 +49,7 @@ export default function Home() {
           
           <div className="flex gap-4 mt-4">
             <button
-              onClick={handleClear}
+              onClick={() => handleClear()}
               className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-700/50 hover:bg-gray-700 text-gray-300 rounded-xl font-medium transition-all duration-200 border border-gray-600/50"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,7 +58,7 @@ export default function Home() {
               一键清空
             </button>
             <button
-              onClick={handleFormat}
+              onClick={() => handleFormat()}
               className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl font-medium shadow-lg shadow-purple-500/30 transition-all duration-200 transform hover:scale-[1.02]"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -86,7 +84,7 @@ export default function Home() {
           </div>
           
           <button
-            onClick={handleCopy}
+            onClick={() => handleCopy()}
             disabled={!outputText}
             className="w-full flex items-center justify-center gap-2 mt-4 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 disabled:from-gray-600 disabled:to-gray-600 text-white rounded-xl font-medium shadow-lg shadow-cyan-500/30 transition-all duration-200 transform hover:scale-[1.02] disabled:transform-none"
           >
